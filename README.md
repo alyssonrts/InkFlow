@@ -1,6 +1,6 @@
 # InkFlow
 
-**Sistema de Gestão do Ciclo de Vida de Tatuagens** — aplicação web para estúdios de tatuagem de pequeno e médio porte.
+**Sistema de Gestão de Tatuagens** — aplicação web para estúdios de tatuagem de pequeno e médio porte.
 
 Projeto desenvolvido na disciplina de Projeto de Desenvolvimento de Sistemas Web (PDSW), do curso de Análise e Desenvolvimento de Sistemas da AESA-CESA (Centro de Ensino Superior de Arcoverde).
 
