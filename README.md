@@ -4,7 +4,7 @@
 
 Projeto desenvolvido na disciplina de Projeto de Desenvolvimento de Sistemas Web (PDSW), do curso de Análise e Desenvolvimento de Sistemas da AESA-CESA (Centro de Ensino Superior de Arcoverde).
 
-> **Status:** em desenvolvimento. A base do backend e do banco de dados (Etapa 1) está no repositório; as telas e as demais regras de negócio serão adicionadas por etapas.
+> **Status:** em desenvolvimento, por etapas. **Etapa 1:** base do backend e do banco de dados. **Etapa 2:** autenticação (login, token JWT e autocadastro de cliente), controle de acesso por perfil e cadastro de tatuadores pelo administrador. As demais funcionalidades serão adicionadas nas próximas etapas.
 
 ## Sobre o projeto
 
@@ -76,13 +76,13 @@ InkFlow/
    cd InkFlow
    ```
 
-2. **Crie o arquivo de variáveis de ambiente** a partir do modelo e ajuste a senha do banco:
+2. **Crie o arquivo de variáveis de ambiente** a partir do modelo:
 
    ```bash
    cp .env.example .env
    ```
 
-   No Windows (PowerShell): `Copy-Item .env.example .env`. O arquivo `.env` não é versionado.
+   No Windows (PowerShell): `Copy-Item .env.example .env`. Depois, edite o `.env` e troque a senha do banco (`POSTGRES_PASSWORD`) e a chave dos tokens (`JWT_SECRET`, com pelo menos 32 caracteres). O arquivo `.env` não é versionado.
 
 3. **Suba o banco de dados PostgreSQL**
 
@@ -90,7 +90,7 @@ InkFlow/
    docker compose up -d
    ```
 
-4. **Inicie o backend** (as migrações do Flyway criam as tabelas na primeira execução):
+4. **Inicie o backend** (as migrações do Flyway criam e atualizam as tabelas, e as contas de demonstração são criadas na primeira execução):
 
    ```bash
    cd backend
@@ -107,11 +107,11 @@ InkFlow/
    npm run dev
    ```
 
-   A interface fica disponível em <http://localhost:5173>.
+   A interface fica disponível em <http://localhost:5173>. Entre com uma das contas de demonstração abaixo.
 
 ## Contas de demonstração
 
-Previstas para o ambiente de demonstração, a serem criadas nas próximas etapas. Existem apenas para avaliação e devem ser removidas antes de qualquer uso real.
+Criadas automaticamente na primeira execução do backend (variável `INKFLOW_DEMONSTRACAO=true`, o padrão do `.env.example`), junto com quatro salas (três exclusivas e uma compartilhada). Existem apenas para avaliação: em qualquer uso real, defina `INKFLOW_DEMONSTRACAO=false` e remova as contas.
 
 | Perfil | Usuário | Senha |
 |---|---|---|
@@ -119,11 +119,28 @@ Previstas para o ambiente de demonstração, a serem criadas nas próximas etapa
 | Tatuador | tatuador@inkflow.com | tatuador123 |
 | Administrador | admin@inkflow.com | admin123 |
 
-## API (principais endpoints previstos)
+## API
+
+Todas as respostas seguem o envelope `{ "data": ..., "message": "...", "error": ... }`. Os endpoints protegidos exigem o cabeçalho `Authorization: Bearer <token>`, obtido no login.
+
+| Verbo | Endpoint | Acesso | Descrição |
+|---|---|---|---|
+| POST | `/api/v1/auth/login` | público | Autentica o usuário e retorna o token de acesso |
+| POST | `/api/v1/auth/registrar` | público | Autocadastro de cliente |
+| GET | `/api/v1/auth/me` | autenticado | Dados do usuário logado |
+| GET | `/api/v1/tatuadores` | autenticado | Lista os tatuadores |
+| GET | `/api/v1/tatuadores/{id}` | autenticado | Consulta um tatuador |
+| POST | `/api/v1/tatuadores` | ADMIN | Cadastra um tatuador e o seu acesso |
+| PUT | `/api/v1/tatuadores/{id}` | ADMIN | Atualiza os dados de um tatuador |
+| PATCH | `/api/v1/tatuadores/{id}/situacao` | ADMIN | Ativa ou inativa um tatuador |
+| GET | `/api/v1/salas` | ADMIN | Lista as salas e indica as ocupadas |
+
+Sem token, a API responde `401`; com um perfil sem permissão, responde `403`; regras de negócio violadas retornam `422`.
+
+Endpoints previstos para as próximas etapas:
 
 | Verbo | Endpoint | Descrição |
 |---|---|---|
-| POST | `/api/v1/auth/login` | Autentica o usuário e retorna o token de acesso |
 | POST | `/api/v1/orcamentos` | Registra uma solicitação de orçamento |
 | PATCH | `/api/v1/projetos/{id}/aprovar` | Registra a aprovação de orçamento e desenho |
 | GET | `/api/v1/agenda/disponibilidade` | Consulta horários livres (tatuador e sala) |
@@ -131,6 +148,15 @@ Previstas para o ambiente de demonstração, a serem criadas nas próximas etapa
 | PATCH | `/api/v1/sessoes/{id}/realizar` | Registra a sessão e dá baixa no estoque |
 | POST | `/api/v1/projetos/{id}/retoque` | Solicita retoque, verificando o prazo de garantia |
 | GET | `/api/v1/estoque/criticos` | Lista materiais abaixo do nível mínimo |
+
+## Testes
+
+Os testes automatizados do backend (JUnit 5 e Mockito) cobrem a validação de CPF, a emissão de tokens, o login, a regra da sala exclusiva ([RN-03]) e as respostas 401 e 403:
+
+```bash
+cd backend
+mvn test
+```
 
 ## Convenções
 
