@@ -1,3 +1,4 @@
+
 package br.edu.aesa.inkflow.config;
 
 import java.util.List;
@@ -91,6 +92,48 @@ public class SecurityConfig {
                     "/api/v1/orcamentos/*/decidir"
                 ).hasRole("CLIENTE")
 
+                // ETAPA 5 - Consultar disponibilidade
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/v1/agenda/disponibilidade"
+                ).hasAnyRole(
+                    "CLIENTE", "TATUADOR", "ADMIN"
+                )
+
+                // ETAPA 5 - Confirmar agendamento
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/v1/sessoes"
+                ).hasAnyRole(
+                    "CLIENTE", "TATUADOR", "ADMIN"
+                )
+
+                // ETAPA 5 - Consultar sessões
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/v1/sessoes"
+                ).hasAnyRole(
+                    "CLIENTE", "TATUADOR", "ADMIN"
+                )
+
+                // Bloquear operações de agenda
+                // ainda não autorizadas explicitamente
+                .requestMatchers(
+                    "/api/v1/agenda",
+                    "/api/v1/agenda/**",
+                    "/api/v1/sessoes",
+                    "/api/v1/sessoes/**"
+                ).denyAll()
+
+                // ETAPA 5 - Permitir consulta de salas
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/v1/salas"
+                ).hasAnyRole(
+                    "CLIENTE", "TATUADOR", "ADMIN"
+                )
+
+                // Administração das salas
                 .requestMatchers(
                     "/api/v1/salas",
                     "/api/v1/salas/**"

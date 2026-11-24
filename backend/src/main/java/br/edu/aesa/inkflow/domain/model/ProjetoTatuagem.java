@@ -113,6 +113,21 @@ public void registrarDesenhoFinal(String url) {
         this.status = "RECUSADO";
     }
 
+
+        // ETAPA 5 - Confirmar agendamento da sessão
+        public void marcarSessaoAgendada() {
+
+        if (!"APROVADO".equals(this.status)
+            && !"APTO_A_AGENDAR".equals(this.status)) {
+
+        throw new IllegalStateException(
+                "O projeto não está apto para agendamento");
+    }
+
+    this.status = "SESSAO_AGENDADA";
+}
+
+
     public Integer getId() {
         return id;
     }
