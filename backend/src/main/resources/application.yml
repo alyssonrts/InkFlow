@@ -1,8 +1,9 @@
+
 spring:
   application:
     name: inkflow
   config:
-    # Lê o mesmo .env usado pelo docker-compose (arquivo na raiz do projeto)
+    # Lê o mesmo .env usado pelo docker-compose
     import: optional:file:../.env[.properties]
   datasource:
     url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB}
@@ -11,7 +12,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      # O esquema é criado e evoluído pelo Flyway; o Hibernate apenas confere
+      # O esquema é criado e evoluído pelo Flyway
       ddl-auto: validate
     properties:
       hibernate:
@@ -21,19 +22,30 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  # Configuração de upload de imagens
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 12MB
+
 server:
   port: 8080
 
 inkflow:
   jwt:
-    # Chave de assinatura dos tokens (mínimo de 32 caracteres), definida no .env
+    # Chave de assinatura dos tokens definida no .env
     secret: ${JWT_SECRET}
     expiracao-minutos: ${JWT_EXPIRACAO_MINUTOS:120}
   cors:
     origens: ${CORS_ORIGENS:http://localhost:5173}
   demonstracao:
-    # Cria salas e contas de demonstração na primeira execução (desligar em uso real)
+    # Cria salas e contas de demonstração
     habilitada: ${INKFLOW_DEMONSTRACAO:true}
+
+  # Diretório de armazenamento das imagens
+  upload:
+    diretorio: ${INKFLOW_UPLOAD_DIR:./uploads}
 
 management:
   endpoints:

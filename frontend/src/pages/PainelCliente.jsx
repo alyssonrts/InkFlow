@@ -1,12 +1,63 @@
-
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { mensagemDeErro } from '../services/api.js'
+import { carregarImagem } from '../services/imagemService.js'
 import {
   listarPedidos,
   decidirOrcamento
 } from '../services/orcamentoService.js'
+
+function LinkImagem({ url, children }) {
+  const [imagem, setImagem] = useState(null)
+  const [erro, setErro] = useState(false)
+
+  useEffect(() => {
+    let ativo = true
+    let temporaria = null
+    setImagem(null)
+    setErro(false)
+
+    carregarImagem(url)
+      .then(resultado => {
+        if (resultado.startsWith('blob:')) {
+          temporaria = resultado
+        }
+        if (ativo) {
+          setImagem({ origem: url, endereco: resultado })
+        } else if (temporaria) {
+          URL.revokeObjectURL(temporaria)
+        }
+      })
+      .catch(() => {
+        if (ativo) setErro(true)
+      })
+
+    return () => {
+      ativo = false
+      if (temporaria) URL.revokeObjectURL(temporaria)
+    }
+  }, [url])
+
+  if (erro) {
+    return <p role="alert" className="text-sm text-red-400">Não foi possível carregar a imagem.</p>
+  }
+
+  if (!imagem || imagem.origem !== url) {
+    return <p className="text-sm text-neutral-400">Carregando imagem...</p>
+  }
+
+  return (
+    <a
+      href={imagem.endereco}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-orange-400 underline"
+    >
+      {children}
+    </a>
+  )
+}
 
 export default function PainelCliente() {
   const { usuario } = useAuth()
@@ -192,14 +243,9 @@ export default function PainelCliente() {
                   Imagem de referência
                 </h3>
 
-                <a
-                  href={p.imagemReferenciaUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-orange-400 underline"
-                >
+                <LinkImagem url={p.imagemReferenciaUrl}>
                   Visualizar referência
-                </a>
+                </LinkImagem>
               </div>
             )} 
             
@@ -213,14 +259,9 @@ export default function PainelCliente() {
 
                 ></p>
 
-                <a
-                  href={p.desenhoFinalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-orange-300 underline"
-                >
+                <LinkImagem url={p.desenhoFinalUrl}>
                   Visualizar desenho final
-                </a>
+                </LinkImagem>
               </div>
             )}
 

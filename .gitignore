@@ -6,6 +6,14 @@ backend/target/
 *.class
 *.log
 
+# Imagens armazenadas pelo sistema
+/backend/uploads/
+
+# Arquivos utilizados em testes
+/teste.jpg
+/teste.png
+/teste.png.jpg
+
 # Frontend (Node / Vite)
 frontend/node_modules/
 frontend/dist/

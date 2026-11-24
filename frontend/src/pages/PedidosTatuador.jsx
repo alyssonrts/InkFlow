@@ -1,11 +1,141 @@
-
 import { useEffect, useState } from 'react'
 import { mensagemDeErro } from '../services/api.js'
+import { carregarImagem, enviarImagem } from '../services/imagemService.js'
 import {
   listarPedidos,
   emitirOrcamento,
   registrarDesenho
 } from '../services/orcamentoService.js'
+
+function LinkImagem({ url, children }) {
+  const [imagem, setImagem] = useState(null)
+  const [erro, setErro] = useState(false)
+
+  useEffect(() => {
+    let ativo = true
+    let temporaria = null
+    setImagem(null)
+    setErro(false)
+
+    carregarImagem(url)
+      .then(resultado => {
+        if (resultado.startsWith('blob:')) {
+          temporaria = resultado
+        }
+        if (ativo) {
+          setImagem({ origem: url, endereco: resultado })
+        } else if (temporaria) {
+          URL.revokeObjectURL(temporaria)
+        }
+      })
+      .catch(() => {
+        if (ativo) setErro(true)
+      })
+
+    return () => {
+      ativo = false
+      if (temporaria) URL.revokeObjectURL(temporaria)
+    }
+  }, [url])
+
+  if (erro) {
+    return <p role="alert" className="text-sm text-red-400">Não foi possível carregar a imagem.</p>
+  }
+
+  if (!imagem || imagem.origem !== url) {
+    return <p className="text-sm text-neutral-400">Carregando imagem...</p>
+  }
+
+  return (
+    <a
+      href={imagem.endereco}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-orange-400 underline"
+    >
+      {children}
+    </a>
+  )
+}
+
+function FormularioDesenho({ onEnviar }) {
+  const [arquivo, setArquivo] = useState(null)
+  const [preview, setPreview] = useState('')
+  const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
+
+  useEffect(() => {
+    if (!arquivo) {
+      setPreview('')
+      return
+    }
+    const url = URL.createObjectURL(arquivo)
+    setPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [arquivo])
+
+  function selecionar(e) {
+    const selecionado = e.target.files?.[0]
+    e.target.value = ''
+    if (!selecionado) return
+    setErro('')
+    if (!['image/jpeg', 'image/png'].includes(selecionado.type)) {
+      setErro('Selecione uma imagem JPG ou PNG.')
+      return
+    }
+    if (selecionado.size > 10 * 1024 * 1024 || selecionado.size === 0) {
+      setErro('Selecione uma imagem válida de até 10 MB.')
+      return
+    }
+    setArquivo(selecionado)
+  }
+
+  async function enviar(e) {
+    e.preventDefault()
+    if (!arquivo || enviando) return
+    setErro('')
+    setEnviando(true)
+    try {
+      await onEnviar(arquivo)
+    } catch (e) {
+      setErro(mensagemDeErro(e))
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <form onSubmit={enviar} className="space-y-4 rounded-xl border border-orange-500/30 bg-[#1e2028] p-4">
+      <h3 className="font-semibold text-orange-400">Apresentar desenho final</h3>
+      <div className="flex min-h-[250px] flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-orange-500/60 bg-[#15161c] p-5">
+        {arquivo ? (
+          <>
+            {preview && <img src={preview} alt="Pré-visualização do desenho final" className="max-h-64 max-w-full rounded-md object-contain" />}
+            <p className="break-all text-sm">{arquivo.name}</p>
+            <p className="text-xs text-neutral-400">{(arquivo.size / 1024 / 1024).toFixed(2)} MB</p>
+          </>
+        ) : (
+          <>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-orange-500" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            <p className="text-sm text-neutral-400">Selecione o desenho final para apresentar ao cliente.</p>
+          </>
+        )}
+        <div className="flex flex-wrap justify-center gap-3">
+          <label className="cursor-pointer rounded-lg bg-[#2b2e38] px-4 py-3 text-sm font-semibold focus-within:ring-2 focus-within:ring-orange-500">
+            {arquivo ? 'Substituir imagem' : 'Selecionar imagem'}
+            <input type="file" accept="image/jpeg,image/png" onChange={selecionar} disabled={enviando} className="sr-only" />
+          </label>
+          {arquivo && <button type="button" disabled={enviando} onClick={() => { setArquivo(null); setErro('') }} className="rounded-lg border border-red-500/40 px-4 py-3 text-sm text-red-400 disabled:opacity-50">Remover</button>}
+        </div>
+      </div>
+      <p className="text-xs text-neutral-400">JPG ou PNG, até 10 MB.</p>
+      {erro && <p role="alert" className="text-sm text-red-400">{erro}</p>}
+      <button type="submit" disabled={!arquivo || enviando} className="rounded-lg bg-orange-500 px-4 py-3 font-semibold text-black disabled:opacity-50">
+        {enviando ? 'Enviando...' : 'Enviar desenho ao cliente'}
+      </button>
+    </form>
+  )
+}
 
 export default function PedidosTatuador() {
   const [pedidos, setPedidos] = useState([])
@@ -16,29 +146,16 @@ export default function PedidosTatuador() {
   const [valores, setValores] = useState({})
 
 
-async function enviarDesenho(id, url) {
-  try {
-    if (!url || !url.trim()) {
-      alert('Informe o link do desenho final.')
-      return
-    }
-
-    await registrarDesenho(id, url.trim())
-
-    alert('Desenho final registrado com sucesso!')
-
-    const pedidosAtualizados = await listarPedidos()
-    setPedidos(pedidosAtualizados)
-
-  } catch (erro) {
-    alert(
-      erro.response?.data?.message ||
-      erro.response?.data?.mensagem ||
-      'Não foi possível registrar o desenho.'
-    )
+  async function enviarDesenho(id, arquivo) {
+    setErro('')
+    setSucesso('')
+    const imagem = await enviarImagem(arquivo)
+    const atualizado = await registrarDesenho(id, imagem.url)
+    setPedidos(anteriores => anteriores.map(p =>
+      p.id === id ? { ...p, ...atualizado, desenhoFinalUrl: imagem.url } : p
+    ))
+    setSucesso('Desenho final registrado com sucesso!')
   }
-}
-
 
   async function carregar() {
     try {
@@ -153,37 +270,9 @@ async function enviarDesenho(id, url) {
           className="space-y-4 rounded-lg border border-neutral-800 bg-neutral-900 p-5"
         >
 
-{p.status === 'DESENHO_EM_APROVACAO' &&
-  !p.desenhoFinalUrl && (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-
-        const url = e.currentTarget.elements.desenhoFinalUrl.value
-        enviarDesenho(p.id, url)
-      }}
-      className="mt-4 space-y-3 rounded-xl border border-orange-500/30 p-4"
-    >
-      <h3 className="font-semibold text-orange-400">
-        Apresentar desenho final
-      </h3>
-
-      <input
-        type="url"
-        name="desenhoFinalUrl"
-        placeholder="https://exemplo.com/desenho.png"
-        required
-        className="w-full rounded-lg border border-zinc-700 bg-zinc-900 p-3 text-white"
-      />
-
-      <button
-        type="submit"
-        className="rounded-lg bg-orange-500 px-4 py-2 font-semibold text-black hover:bg-orange-400"
-      >
-        Enviar desenho ao cliente
-      </button>
-    </form>
-  )}
+          {p.status === 'DESENHO_EM_APROVACAO' && !p.desenhoFinalUrl && (
+            <FormularioDesenho onEnviar={arquivo => enviarDesenho(p.id, arquivo)} />
+          )}
 
 {p.desenhoFinalUrl && (
   <div className="mt-4">
@@ -191,14 +280,9 @@ async function enviarDesenho(id, url) {
       Desenho final apresentado
     </p>
 
-    <a
-      href={p.desenhoFinalUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-orange-300 underline"
-    >
-      Visualizar desenho final
-    </a>
+    <LinkImagem url={p.desenhoFinalUrl}>
+              Visualizar desenho final
+            </LinkImagem>
   </div>
 )}
 
@@ -228,14 +312,9 @@ async function enviarDesenho(id, url) {
           </div>
 
           {p.imagemReferenciaUrl && (
-            <a
-              className="inline-block text-orange-400 underline"
-              href={p.imagemReferenciaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <LinkImagem url={p.imagemReferenciaUrl}>
               Ver imagem de referência
-            </a>
+            </LinkImagem>
           )}
 
           {p.valorTotal != null ? (
@@ -311,7 +390,7 @@ async function enviarDesenho(id, url) {
 
               {p.status === 'DESENHO_EM_APROVACAO' && (
                 <p className="text-sm text-yellow-400">
-                  Aguardando a decisão do cliente.
+                  {p.desenhoFinalUrl ? 'Aguardando a decisão do cliente.' : 'Aguardando o envio do desenho final.'}
                 </p>
               )}
             </div>

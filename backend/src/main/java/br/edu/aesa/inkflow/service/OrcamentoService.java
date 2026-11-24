@@ -60,14 +60,23 @@ public class OrcamentoService {
 
         String url = req.imagemReferenciaUrl();
 
-        if (url != null && !url.isBlank()
-                && !(url.startsWith("https://")
-                || url.startsWith("http://"))) {
+        if (url != null) {
+        url = url.trim();
 
-            throw new RegraDeNegocioException(
-                    "A referência deve ser uma URL HTTP(S)");
+        if (url.isBlank()) {
+        url = null;
+                }
         }
 
+        if (url != null
+        && !(url.startsWith("https://")
+        || url.startsWith("http://")
+        || url.matches(
+                "/uploads/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\.(jpg|png)"))) {
+
+        throw new RegraDeNegocioException(
+            "Informe uma imagem de referência válida.");
+}
         ProjetoTatuagem p = projetos.save(
                 new ProjetoTatuagem(
                         u.getCliente(),
@@ -248,13 +257,18 @@ public class OrcamentoService {
                     "Este projeto pertence a outro tatuador");
         }
 
-        if (url == null || url.isBlank()
+        if (url != null) {
+    url = url.trim();
+}
+                if (url == null || url.isBlank()
                 || !(url.startsWith("https://")
-                || url.startsWith("http://"))) {
-            throw new RegraDeNegocioException(
-                    "Informe uma URL HTTP(S) válida");
-        }
+                || url.startsWith("http://")
+                || url.matches(
+                "/uploads/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\.(jpg|png)"))) {
 
+                throw new RegraDeNegocioException(
+            "Informe uma imagem válida para o desenho final.");
+        }
         if (url.length() > 1000) {
             throw new RegraDeNegocioException(
                     "A URL do desenho é muito longa");
